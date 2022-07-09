@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<!-- saved from url=(0024)http://192.168.1.7:8080/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixiJS</title>
+
+    <script src="./PixiJS_files/pixi.js.download"></script>
+
+</head>
+
+<body>
+
+    <!-- <button onclick="resize()">resize</button> -->
+
+    <!-- <div id="d" style="background-color: blueviolet; width: 300px; height: 200px;"> This is my div</div> -->
+
+    <div class="left">Left content</div>
+    <div class="right">Right content</div>
+    <div class="tbl"></div>
+    <div class="bot-right">Bottom Right content</div>
+    <button onclick="changeWidth()">increase canvas width</button>
+    <button onclick="shrinkWidth()">shrink canvas width</button>
+
+
+    <script>
+        let table_width = 640;
+        let table_height = 360;
+        const headers = ["#", "Id", "Name", "Properties"]
+        let header_objects = headers.map((h, index) => {
+            return { label: h, id: index }
+        })
+        const data = {}
+        //Fill data
+
+
+        // let app = new PIXI.Application({ width: table_width, table_height: table_height });
+        // let app = new PIXI.Application({ width: table_width, height: table_height });
+        // // document.body.appendChild(app.view);
+        // document.querySelector('.tbl').appendChild(app.view);
+        // app.view.id = 'x'
+
+        draw_headers(header_objects)
+
+        function draw_headers(header_objects) {
+            for (const header_obj of header_objects) {
+                console.log(get_initial_cell_width(header_obj));
+            }
+        }
+
+        function get_initial_cell_width(header_object) {
+            return header_object.width ? header_object.width : table_width / headers.length
+        }
+
+
+        // Create a Graphics object, set a fill color, draw a rectangle
+        // let obj = new PIXI.Graphics();
+        // // obj.beginFill(0xff0000);
+        // obj.lineStyle(1, 0x00FF00);
+        // obj.drawRect(0, 0, 200, 100);
+
+        // // Add it to the stage to render
+        // app.stage.addChild(obj);
+
+
+
+        const resize = () => {
+            // console.log(app.view);
+            // let d = document.getElementById('d')
+            // console.log(d);
+            console.log((app.view.offsetWidth * 2) + "px");
+            app.view.style.width = (app.view.offsetWidth * 2) + "px"
+            app.view.style.width = (app.view.offsetHeight * 2) + "px"
+        }
+
+        const changeWidth = () => {
+            app.view.style.width =  (app.view.offsetWidth + 40) + "px"
+        }
+
+        const shrinkWidth = () => {
+            app.view.style.width =  (app.view.offsetWidth - 40) + "px"
+        }
+
+
+        class TableContext {
+            constructor(width, height, containerElement, pixi) {
+                this.width = width
+                this.height = height
+                this.containerElement = containerElement
+                this.pixi = pixi
+                // new ResizeObserver(() => {
+                //     console.log("Width: " + this.containerElement.offsetWidth + " Hh: " + this.containerElement.offsetHeight);
+
+                // }).observe(this.containerElement)
+
+            }
+
+            table_width() {
+                return this.width
+            }
+
+            draw(graphics) {
+                
+                // let app = new PIXI.Application({ width: table_width, height: table_height });
+                // document.querySelector('.tbl').appendChild(app.view);
+                // let obj = new PIXI.Graphics();
+                // obj.beginFill(0xff0000);
+                // obj.lineStyle(1, 0x00FF00);
+                // obj.drawRect(0, 0, 200, 100);
+                // this.pixi.stage.addChild(graphics)
+                // this.pixi.stage.addChild(obj)
+                console.log('drawing');
+                this.pixi.stage.addChild(graphics)
+            }
+
+            
+
+            
+        }
+
+        class Cell {
+            constructor(x, y, width, height, context) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.context = context;
+            }
+
+            px() {
+                console.log(this.x);
+            }
+        }
+
+        class HeaderCell {
+            constructor(index, x, y, width, height, header) {
+                this.index = index;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.header = header;
+                this.resizing = false
+                this.g = new PIXI.Graphics();
+                this.handle = new PIXI.Graphics();
+                this.handle.interactive = true;
+                // this.handle.hitArea = new PIXI.Rectangle(this.x + this.width - 4, this.y + 2, 10, this.height - 4);
+                this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
+                this.text = new PIXI.Text('Id: '+this.width,{fontFamily : 'Arial', fontSize: 16, fill : 0xff1010, align : 'center'});
+                this.text.x = this.width/2
+                this.container = new PIXI.Container();
+                this.container.addChild(this.g)
+                this.container.addChild(this.handle)
+                this.container.addChild(this.text)
+                this.container.x = this.index * this.width
+                this.container.y = this.y
+                this.draw()
+                this.handle.on('pointerdown', (e) => {
+                    this.resizing = true
+                    this.start_x = e.data.global.x
+                });
+                this.handle.on('pointerup', (e) => {
+                    this.resizing = false
+                });
+                this.handle.on('pointerupoutside', (e) => {
+                    this.resizing = false
+                });
+                this.handle.on('pointermove', (e)=>{
+                    if (this.resizing) {
+                        // console.log(e.data.global.x);
+                        
+                        const distance =  e.data.global.x - this.start_x
+                        // console.log('distance: ' + distance);
+                        this.width += distance
+                        this.start_x = e.data.global.x
+                        // this.handle.clear()
+                        // this.handle.lineStyle(1, 0x00FF00); // Draw resize handle
+                        // this.handle.drawRect(this.x + this.width - 4, this.y + 2, 10, this.height - 4)
+                        // this.handle.drawRect(this.width - 4, 2, 10, this.height - 4)
+                        // this.handle.hitArea = new PIXI.Rectangle(this.x + this.width - 4, this.y + 2, 10, this.height - 4);
+                        // this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
+                        // this.g.clear()
+                        // this.g.lineStyle(1, 0xFF0000);
+                        // this.g.drawRect(this.x, this.y, this.width, this.height);
+                        // this.g.drawRect(0, 0, this.width, this.height);
+                        // this.container.x = this.x + this.width - 4
+                        // this.container.y = this.y + 2
+                        this.draw()
+                        this.header.headerCellWidthChanged(this.index, distance)
+                    }
+                })
+                // this.context = context;
+            }
+
+            draw() {
+                // console.log('drawing header cell: '+this.index);
+                
+                this.g.clear()
+                this.g.lineStyle(1, 0xFF0000);
+                // this.g.drawRect(this.x, this.y, this.width, this.height);
+                this.g.drawRect(0, 0, this.width, this.height);
+                this.handle.clear()
+                this.handle.lineStyle(1, 0x00FF00); // Draw resize handle
+                // this.handle.drawRect(this.x + this.width - 4, this.y + 2, 10, this.height - 4)
+                this.handle.drawRect(this.width - 4, 2, 10, this.height - 4)
+                this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
+                // this.text.clear()
+                this.text.text = "W: " + (Math.floor(this.container.width))
+                this.text.x = this.width/2
+                this.container.x = this.x
+                return this.container
+            }
+        }
+
+        class Header {
+            static get Height() { return this.height; }
+
+            constructor(x, y, height, columns, context) {
+                this.x = x;
+                this.y = y;
+                this.height = height;
+                this.columns = columns;
+                this.ctx = context;
+                this.g = new PIXI.Graphics();
+                this.headerCells = []
+                for(let i = 0; i < this.columns.length; i++) {
+                    const cell = new HeaderCell(i, this.x + (i*this.defaultCellWidth), this.y, this.defaultCellWidth, this.height, this)
+                    // const cell = new HeaderCell(0, 0, 200, this.height)
+                    this.ctx.draw(cell.draw())
+                    this.headerCells.push(cell)
+                }
+                this.g.lineStyle(1, 0x0000FF);
+                this.g.drawRect(0, 0, 50, 40);
+                this.g.hitArea = new PIXI.Rectangle(0, 0, 50, 40);
+                this.g.interactive = true
+                this.g.on('pointerover', function (e) {
+                    console.log('Mouse over');
+                    // console.log('X', e.data.global.x, 'Y', e.data.global.y);
+                });
+                this.ctx.draw(this.g)
+                console.log('Header drawn');
+                
+            }
+
+            get defaultCellWidth() {
+                // console.log(this.ctx.width/this.columns.length);
+                return this.ctx.width/this.columns.length
+                // return 100
+            }
+
+            headerCellWidthChanged(index, distance) {
+                if ((distance < 0 && this.headerCells[index + 1]) || (distance > 0 && this.headerCells[index + 1])) {
+                    let i = index + 1
+                    let adjacentResized
+                    while (this.headerCells[i]) {
+                        adjacentResized = true
+                        this.headerCells[i].x +=  distance
+                        this.ctx.draw(this.headerCells[i].draw())
+                        i++
+                    }
+                    if (adjacentResized) {
+                        this.headerCells[i-1].width -= distance
+                    }
+                }
+            }
+
+            draw(width) {
+
+                
+                
+                // this.g.lineStyle(1, 0xFF0000);
+                // this.g.drawRect(this.x, this.y, width, this.height);
+                // // this.ctx.
+                // // return this.g
+                // this.ctx.draw(this.g)
+            }
+        }
+
+        class Table {
+            constructor(headers) {
+                this.app = new PIXI.Application({ width: table_width, height: table_height });
+                this.ctx = new TableContext(table_width, table_height, this.app.view, this.app)
+                this.header = new Header(0, 0, 20, headers, this.ctx)
+                this.app.ticker.add(() => this.draw());
+                // this.header.draw(100)
+                document.querySelector('.tbl').appendChild(this.app.view);
+            }
+
+            draw() {
+                // console.log('x');
+                
+                // this.header.draw(this.ctx.width)
+                // this.ctx.draw(this.header.draw(this.ctx.width))
+            }
+        }
+
+
+        // const tblContext = new TableContext(table_width, table_height, null, null)
+        // tblContext.draw()
+        // const header = new Header(0, 0, 30, headers, tblContext)
+        new Table(headers).draw()
+
+        // app.stage.addChild(header.draw())
+        // console.log(header.draw());
+        
+        // let c = new Cell(1000)
+        // c.px()
+
+//    new ResizeObserver(() => {
+//                     console.log("Width: " + app.view.offsetWidth + " H: " + app.view.offsetHeight);
+                    
+//                 }).observe(app.view)
+
+        // }, app.view)
+    </script>
+    
+    <!-- <canvas width="640" height="600" id="x" style="touch-action: none; cursor: inherit;"></canvas> -->
+
+
+   
+
+    <style>
+        body {
+            background-color: burlywood;
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(2, 1fr);
+
+        }
+        body div {
+            background-color: darkgrey;
+        }
+    </style>
+
+
+
+</body>
+</html>
