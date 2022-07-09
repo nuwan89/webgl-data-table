@@ -110,7 +110,7 @@
                 // obj.drawRect(0, 0, 200, 100);
                 // this.pixi.stage.addChild(graphics)
                 // this.pixi.stage.addChild(obj)
-                console.log('drawing');
+                // console.log('drawing');
                 this.pixi.stage.addChild(graphics)
             }
 
@@ -168,34 +168,18 @@
                 });
                 this.handle.on('pointermove', (e)=>{
                     if (this.resizing) {
-                        // console.log(e.data.global.x);
-                        
                         const distance =  e.data.global.x - this.start_x
-                        // console.log('distance: ' + distance);
                         this.width += distance
                         this.start_x = e.data.global.x
-                        // this.handle.clear()
-                        // this.handle.lineStyle(1, 0x00FF00); // Draw resize handle
-                        // this.handle.drawRect(this.x + this.width - 4, this.y + 2, 10, this.height - 4)
-                        // this.handle.drawRect(this.width - 4, 2, 10, this.height - 4)
-                        // this.handle.hitArea = new PIXI.Rectangle(this.x + this.width - 4, this.y + 2, 10, this.height - 4);
-                        // this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
-                        // this.g.clear()
-                        // this.g.lineStyle(1, 0xFF0000);
-                        // this.g.drawRect(this.x, this.y, this.width, this.height);
-                        // this.g.drawRect(0, 0, this.width, this.height);
-                        // this.container.x = this.x + this.width - 4
-                        // this.container.y = this.y + 2
                         this.draw()
                         this.header.headerCellWidthChanged(this.index, distance)
                     }
                 })
-                // this.context = context;
+                
             }
 
             draw() {
                 // console.log('drawing header cell: '+this.index);
-                
                 this.g.clear()
                 this.g.lineStyle(1, 0xFF0000);
                 // this.g.drawRect(this.x, this.y, this.width, this.height);
@@ -206,7 +190,7 @@
                 this.handle.drawRect(this.width - 4, 2, 10, this.height - 4)
                 this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
                 // this.text.clear()
-                this.text.text = "W: " + (Math.floor(this.container.width))
+                this.text.text = "w: " + (Math.floor(this.container.width))
                 this.text.x = this.width/2
                 this.container.x = this.x
                 return this.container
@@ -230,17 +214,6 @@
                     this.ctx.draw(cell.draw())
                     this.headerCells.push(cell)
                 }
-                this.g.lineStyle(1, 0x0000FF);
-                this.g.drawRect(0, 0, 50, 40);
-                this.g.hitArea = new PIXI.Rectangle(0, 0, 50, 40);
-                this.g.interactive = true
-                this.g.on('pointerover', function (e) {
-                    console.log('Mouse over');
-                    // console.log('X', e.data.global.x, 'Y', e.data.global.y);
-                });
-                this.ctx.draw(this.g)
-                console.log('Header drawn');
-                
             }
 
             get defaultCellWidth() {
@@ -266,46 +239,86 @@
             }
 
             draw(width) {
+            }
+        }
 
-                
-                
-                // this.g.lineStyle(1, 0xFF0000);
-                // this.g.drawRect(this.x, this.y, width, this.height);
-                // // this.ctx.
-                // // return this.g
-                // this.ctx.draw(this.g)
+        class ScrollBar {
+
+            static get GRABBER_THICKNESS () { return 2}
+
+            constructor(x, y, barWidth, barHeight, graberWidth, context) {
+                this.x = x;
+                this.y = y;
+                this.barWidth = barWidth;
+                this.barHeight = barHeight;
+                this.grabberWidth = graberWidth;
+                this.grabberHeight = 50;
+                this.ctx = context;
+                this.scrolling = false
+                this.bar = new PIXI.Graphics()
+                this.bar.lineStyle(1, 0x00FF00)
+                this.bar.drawRect(0, 0, this.barWidth, this.barHeight)
+                this.grabber = new PIXI.Graphics()
+                this.grabber.x = 0
+                this.grabber.y = 0
+                // this.grabber.anchor = 0.5;
+                this.grabber.interactive = true
+                this.grabber.hitArea = new PIXI.Rectangle(0, this.grabber.y, this.grabberWidth, this.grabberHeight);
+                this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0x0000FF)
+                this.grabber.drawRect(0, this.grabber.y, this.grabberWidth, this.grabberHeight)
+                this.grabber.hitArea = new PIXI.Rectangle(0, this.grabber.y, this.grabberWidth, this.grabberHeight);
+                this.container = new PIXI.Container()
+                this.container.addChild(this.bar)
+                this.container.addChild(this.grabber)
+                this.container.x = this.x
+                this.container.y = this.y
+                this.grabber.on('pointerdown', (e) => {
+                    this.grabEvent = e.data
+                    this.offY = this.grabber.y - this.grabEvent.getLocalPosition(this.container).y;
+                    this.scrolling = true
+                });
+                this.grabber.on('pointerup', (e) => {
+                    this.scrolling = false
+                    this.grabEvent = null
+                });
+                this.grabber.on('pointerupoutside', (e) => {
+                    this.scrolling = false
+                    this.grabEvent = null
+                });
+                this.grabber.on('pointermove', (e)=>{
+                    if (this.scrolling) {
+                        const newPos = this.grabEvent.getLocalPosition(this.container).y + this.offY;
+                        if (newPos >= 0 && newPos <= this.barHeight - this.grabberHeight - ScrollBar.GRABBER_THICKNESS) {
+                            this.grabber.y = newPos;
+                        }
+                    }
+                })
+                this.ctx.draw(this.container)
             }
         }
 
         class Table {
-            constructor(headers) {
+
+            static get SCROLL_WIDTH() { return 10 }
+            static get HEADER_HEIGHT() { return 20 }
+
+            constructor(headers, rows) {
                 this.app = new PIXI.Application({ width: table_width, height: table_height });
                 this.ctx = new TableContext(table_width, table_height, this.app.view, this.app)
                 this.header = new Header(0, 0, 20, headers, this.ctx)
-                this.app.ticker.add(() => this.draw());
+                this.scrollbar = new ScrollBar(table_width - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, table_height-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
+                // this.app.ticker.add(() => this.draw());
                 // this.header.draw(100)
                 document.querySelector('.tbl').appendChild(this.app.view);
             }
-
-            draw() {
-                // console.log('x');
-                
-                // this.header.draw(this.ctx.width)
-                // this.ctx.draw(this.header.draw(this.ctx.width))
-            }
         }
 
+        let rows = []
+        for (let i = 0; i < 1000; i++) {
+            rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000', price: 1000.00 })
+        }
+        new Table(headers, rows)
 
-        // const tblContext = new TableContext(table_width, table_height, null, null)
-        // tblContext.draw()
-        // const header = new Header(0, 0, 30, headers, tblContext)
-        new Table(headers).draw()
-
-        // app.stage.addChild(header.draw())
-        // console.log(header.draw());
-        
-        // let c = new Cell(1000)
-        // c.px()
 
 //    new ResizeObserver(() => {
 //                     console.log("Width: " + app.view.offsetWidth + " H: " + app.view.offsetHeight);
