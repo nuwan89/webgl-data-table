@@ -106,24 +106,25 @@
             }
 
             draw(graphics) {
+                this.pixi.stage.sortableChildren = true
                 this.pixi.stage.addChild(graphics)
             }
             
         }
 
-        class Cell {
-            constructor(x, y, width, height, context) {
-                this.x = x;
-                this.y = y;
-                this.width = width;
-                this.height = height;
-                this.context = context;
-            }
+        // class Cell {
+        //     constructor(x, y, width, height, context) {
+        //         this.x = x;
+        //         this.y = y;
+        //         this.width = width;
+        //         this.height = height;
+        //         this.context = context;
+        //     }
 
-            px() {
-                console.log(this.x);
-            }
-        }
+        //     px() {
+        //         console.log(this.x);
+        //     }
+        // }
 
         class HeaderCell {
             constructor(index, x, y, width, height, header) {
@@ -137,12 +138,15 @@
                 this.g = new PIXI.Graphics();
                 this.handle = new PIXI.Graphics();
                 this.handle.interactive = true;
+                this.handle.cursor = 'col-resize'
                 // this.handle.hitArea = new PIXI.Rectangle(this.x + this.width - 4, this.y + 2, 10, this.height - 4);
                 this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
-                this.text = new PIXI.Text('Id: '+this.width,{fontFamily : 'Arial', fontSize: 16, fill : 0xff1010, align : 'center'});
+                this.text = new PIXI.Text('Id: '+this.width,{fontFamily : 'Arial', fontSize: 16, fill : 0x1E1E1E, align : 'center'});
                 this.text.x = this.width/2
                 this.container = new PIXI.Container();
-                this.g.zIndex = 100
+                this.container.zIndex = 100
+                // this.g.zIndex = 10
+                // this.g.sortableChildren = true
                 this.container.addChild(this.g)
                 this.container.addChild(this.handle)
                 this.container.addChild(this.text)
@@ -175,13 +179,16 @@
             draw() {
                 // console.log('drawing header cell: '+this.index);
                 this.g.clear()
-                this.g.lineStyle(1, 0xFF0000);
+                this.g.lineStyle(1, 0xB5B5B5);
+                this.g.beginFill(0xD4D4D4)
                 // this.g.drawRect(this.x, this.y, this.width, this.height);
                 this.g.drawRect(0, 0, this.width, this.height);
                 this.handle.clear()
-                this.handle.lineStyle(1, 0x00FF00); // Draw resize handle
+                this.handle.lineStyle(1, 0x797979); // Draw resize handle
+                this.handle.beginFill(0x797979)
                 // this.handle.drawRect(this.x + this.width - 4, this.y + 2, 10, this.height - 4)
-                this.handle.drawRect(this.width - 4, 2, 10, this.height - 4)
+                // this.handle.drawRect(this.width - 4, 2, 1, this.height - 4)
+                this.handle.drawRect(this.width - 0, 0, 1, this.height - 4)
                 this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
                 // this.text.clear()
                 this.text.text = "w: " + (Math.floor(this.container.width))
@@ -202,7 +209,7 @@
                 this.height = height
                 this.container = new PIXI.Container()
                 this.cellG = new PIXI.Graphics()
-                this.text = new PIXI.Text(this.value,{fontFamily : 'Arial', fontSize: 16, fill : 0xff1010, align : 'center'});
+                this.text = new PIXI.Text(this.value,{fontFamily : 'Arial', fontSize: 12, fill : 0x1E1E1E, align : 'center'});
                 // this.text = new PIXI.BitmapText("this.value", { fontName: "TableFont" });
                 // this.text.text = this.value;
                 // this.text.text = 'zzz'
@@ -214,7 +221,9 @@
             
             draw() { 
                 this.cellG.clear()
-                this.cellG.lineStyle(1, 0x00FF00)
+                this.cellG.lineStyle(1, 0xB5B5B5)
+                this.cellG.beginFill(0xF2F2F2);
+
                 // this.cellG.drawRect(this.x, this.y, this.width, this.height)
                 this.cellG.drawRect(0, 0, this.width, this.height)
                 this.container.x = this.x
@@ -350,7 +359,8 @@
                 this.ctx = context;
                 this.scrolling = false
                 this.bar = new PIXI.Graphics()
-                this.bar.lineStyle(1, 0x00FF00)
+                this.bar.lineStyle(1, 0xB5B5B5)
+                this.bar.beginFill(0xB5B5B5)
                 this.bar.drawRect(0, 0, this.barWidth, this.barHeight)
                 this.grabber = new PIXI.Graphics()
                 this.grabber.x = 0
@@ -358,10 +368,13 @@
                 // this.grabber.anchor = 0.5;
                 this.grabber.interactive = true
                 this.grabber.hitArea = new PIXI.Rectangle(0, this.grabber.y, this.grabberWidth, this.grabberHeight);
-                this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0x0000FF)
+                this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0x979797)
+                // this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0xB5B5B5)
+                this.grabber.beginFill(0x979797)
                 this.grabber.drawRect(0, this.grabber.y, this.grabberWidth, this.grabberHeight)
                 this.grabber.hitArea = new PIXI.Rectangle(0, this.grabber.y, this.grabberWidth, this.grabberHeight);
                 this.container = new PIXI.Container()
+                this.container.zIndex = 10
                 this.container.addChild(this.bar)
                 this.container.addChild(this.grabber)
                 this.container.x = this.x
@@ -466,7 +479,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 10000; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000', price: 1000.00 })
         }
         new Table(headers, rows, table_width, table_height)
