@@ -200,7 +200,7 @@
                 this.y = y
                 this.width = width
                 this.height = height
-                this.container = new PIXI.Graphics()
+                this.container = new PIXI.Container()
                 this.cellG = new PIXI.Graphics()
                 this.text = new PIXI.Text(this.value,{fontFamily : 'Arial', fontSize: 16, fill : 0xff1010, align : 'center'});
                 // this.text = new PIXI.BitmapText("this.value", { fontName: "TableFont" });
@@ -221,39 +221,53 @@
                 this.container.y = this.y
                 return this.container
             }
-
+            
             setX(x) {
-                this.container.x = x
-                return this.draw()
+                this.x = x
+                this.container.x = this.x
+                // return this.draw()
             }
 
             setWidth(width) {
-                this.cellG.width = width
-                return this.draw()
+                this.width = width
+                this.draw()
+                // this.cellG.clear()
+                // this.cellG.lineStyle(1, 0x00FF00)
+                // this.cellG.drawRect(0, 0, width, this.height)
+                // this.cellG.width = width //This will just scale the graphics with line width as well
+                // return this.draw()
             }
         }
 
         class Row {
-            constructor(columns, index, height, header, context) {
+            constructor(columns, index, height, header, context, table) {
                 this.columns = columns
                 this.index = index
                 this.ctx = context
+                this.table = table
                 this.header = header
                 this.height = height
                 this.headrOffsetY = this.header.height
                 this.cells = []
                 header.addColumnChangedListener((columnIndex, newWidth, newX) => {
+                    // Chek if this row is in visible range
+                    // if (this.index >= table.visibleRowStart && this.index > table.visibleRowStart + table.viewPortRowCount) {
+                    //     return // TODO:     onScroll call other listeners!
+                    // }
                     if (newX) {
-                        this.ctx.draw(this.cells[columnIndex].setX(newX))
+                        // this.ctx.draw(this.cells[columnIndex].setX(newX))
+                        this.cells[columnIndex].setX(newX)
                     }
                     // console.log(this.cells);
                     if (newWidth) {
-                        this.ctx.draw(this.cells[columnIndex].setWidth(newWidth))
+                        // console.log({row: this.index, columnIndex, newWidth, newX});
+                        // this.ctx.draw(this.cells[columnIndex].setWidth(newWidth))
+                        this.cells[columnIndex].setWidth(newWidth)
                     }
                 })
                 for (let i = 0; i < header.headerCells.length; i++) {
                     const headerCell = header.headerCells[i]
-                    const dataCell = new DataCell(i, i*index + i, headerCell.x, this.index * this.height + this.headrOffsetY, headerCell.width, this.height)
+                    const dataCell = new DataCell(i, index, headerCell.x, this.index * this.height + this.headrOffsetY, headerCell.width, this.height)
                     this.cells.push(dataCell)
                     // this.ctx.draw(dataCell.draw())
                 }
@@ -305,12 +319,14 @@
                     }
                     if (adjacentResized) {
                         this.headerCells[i-1].width -= distance
-                        this.notifyListeners(index, this.headerCells[i-1].width)
+                        // this.notifyListeners(index, this.headerCells[i-1].width) // Not working!
                     }
                 }
             }
 
             notifyListeners(columnIndex, newWidth, newX) {
+                // console.log(this.columnListeners.length);
+                // console.log('ca');
                 for (const listener of this.columnListeners) {
                     listener(columnIndex, newWidth, newX)
                 }
@@ -399,6 +415,7 @@
                 this.header = new Header(0, 0, Table.HEADER_HEIGHT, headers, this.ctx)
                 this.scrollbar = new ScrollBar(this.tableWidth - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.tableHeight-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
                 this.scrollbar.setScrollListener((y)=>{
+                                        
                     // this.renderRows(this.visibleRowStart)
                     // const p = Math.floor((y/(this.scrollbar.barHeight - this.scrollbar.grabberHeight)) * this.rows.length)
                     const p = Math.floor((Math.round(y)/(this.scrollbar.barHeight - this.scrollbar.grabberHeight)) * this.rows.length)
@@ -427,7 +444,7 @@
                     if (!this.renderedRows[i]) {
                         // console.log({fromIndex, toIndex: fromIndex + this.viewPortRowCount});
                         // console.log({fromIndex, to: fromIndex + this.viewPortRowCount});
-                        const row = new Row(headers, i, Table.HEADER_HEIGHT, this.header, this.ctx)
+                        const row = new Row(headers, i, Table.HEADER_HEIGHT, this.header, this.ctx, this)
                         // **************************** Add data cells to a group and render them ****************************
                         for (let j = 0; j < row.cells.length; j++) {
                             this.dataCellContainer.addChild(row.cells[j].draw());
@@ -449,7 +466,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 100; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000', price: 1000.00 })
         }
         new Table(headers, rows, table_width, table_height)
