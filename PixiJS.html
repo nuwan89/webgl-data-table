@@ -381,15 +381,8 @@
                 this.topScrollBtn.drawRect(0, 0, this.scrollBtnSize, this.scrollBtnSize)
                 this.topScrollBtn.hitArea = new PIXI.Rectangle(0, 0, this.scrollBtnSize, this.scrollBtnSize);
                 this.topScrollBtn.on('pointerdown', (e) => {
+                    e.data.originalEvent.preventDefault();
                     this.scrollButtonListener('up', this.grabber.y)
-                    let curTop = this.grabber.y
-                    // console.log(curTop);
-                    // let p = ((this.barHeight - this.grabberHeight - (2*this.scrollBtnSize))/this.rows.length)
-                    // this.grabber.y = p
-                    // this.grabEvent = e.data
-                    // this.offY = this.grabber.y - this.grabEvent.getLocalPosition(this.container).y;
-                    // this.scrolling = true
-                    // console.log(this.topScrollBtn.width);
                 });
                 this.botScrollBtn = new PIXI.Graphics()
                 this.botScrollBtn.lineStyle(1, 0xff0000)
@@ -397,6 +390,10 @@
                 this.botScrollBtn.interactive = true
                 this.botScrollBtn.drawRect(0, this.barHeight - this.scrollBtnSize, this.scrollBtnSize, this.scrollBtnSize)
                 this.botScrollBtn.hitArea = new PIXI.Rectangle(0, this.barHeight - this.scrollBtnSize, this.scrollBtnSize, this.scrollBtnSize);
+                this.botScrollBtn.on('pointerdown', (e) => {
+                    e.data.originalEvent.preventDefault();
+                    this.scrollButtonListener('down', this.grabber.y)
+                });
                 this.grabber = new PIXI.Graphics()
                 // this.grabber.x = 0
                 // this.grabber.y = this.scrollBtnSize
@@ -422,7 +419,7 @@
                     this.grabEvent = e.data
                     this.offY = this.grabber.y - this.grabEvent.getLocalPosition(this.container).y;
                     this.scrolling = true
-                    console.log(this.topScrollBtn.width);
+                    console.log(this.grabber.y);
                 });
                 this.grabber.on('pointerup', (e) => {
                     this.scrolling = false
@@ -435,14 +432,16 @@
                 this.grabber.on('pointermove', (e)=>{
                     if (this.scrolling) {
                         const newPosY = this.grabEvent.getLocalPosition(this.container).y + this.offY;
-                        // if (newPos >= 0 && newPos <= this.barHeight - this.grabberHeight - ScrollBar.GRABBER_THICKNESS) {
+                        // if (newPos0 >= 0 && newPos <= this.barHeight - this.grabberHeight - ScrollBar.GRABBER_THICKNESS) {
+                            e.data.originalEvent.preventDefault();
+                        console.log(newPosY);
                         if (newPosY >= 0 && newPosY <= this.barHeight - this.grabberHeight - (2 * this.scrollBtnSize)) {
                             this.grabber.y = newPosY;
-                            // console.log(newPos);
-                            // console.log(this.scrollY);
-                            this.scrollListener(this.grabber.y) // Slow code!
+                            this.scrollListener(this.grabber.y) // Used to be Slow code :)
+                        } else if (newPosY < this.grabber.y && this.grabber.y > 0) {
+                            this.grabber.y = 0
+                            this.scrollListener(this.grabber.y)
                         }
-                        e.data.originalEvent.preventDefault();
                     }
                 })
                 this.ctx.draw(this.container)
@@ -494,17 +493,16 @@
                     this.updateRows(p)
                 })
                 this.scrollbar.setScrollButtonListener((direction, grabberY) => {
+                    const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
+                    let p = movableLength/this.rows.length
                     if (direction == 'up') {
-                        const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
-                        // console.log('render up: '+(movableLength));
-                        let p = movableLength/this.rows.length
                         this.scrollbar.grabber.y -= p
-                        // // console.log(p);
-                        // this.updateRows(Math.floor(grabberY/p))
                         this.scrollbar.curStartIndex -= 1
                         this.updateRows(this.scrollbar.curStartIndex)
                     } else {
-                        console.log('render down');
+                        this.scrollbar.grabber.y += p
+                        this.scrollbar.curStartIndex += 1
+                        this.updateRows(this.scrollbar.curStartIndex)
                     }
                 })
                 this.renderedRows = []
@@ -590,7 +588,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 100000; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000'+i, price: (1000.00 + i) })
         }
         new Table(headers, rows, table_width, table_height)
