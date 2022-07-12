@@ -25,19 +25,20 @@
 
 
     <script>
+        // https://github.com/kittykatattack/learningPixi#application
         let table_width = 640;
         let table_height = 360;
-        const headers = ["#", "Id", "Name", "Properties"]
+        const headers = ["id", "name", "description", "price"]
         let header_objects = headers.map((h, index) => {
-            return { label: h, id: index }
+            return { label: h, id: h }
         })
         const data = {}
         //Fill data
 
         PIXI.BitmapFont.from("TableFont", {
             fontFamily: "Arial",
-            fontSize: 16,
-            strokeThickness: 2,
+            fontSize: 12,
+            // strokeThickness: 2,
             fill: "purple"
         });
 
@@ -91,8 +92,11 @@
 
         class TableContext {
             constructor(width, height, containerElement, pixi) {
-                this.width = width
-                this.height = height
+                // this.width = width
+                // this.height = height
+                this.width = pixi.renderer.view.width
+                this.height = pixi.renderer.view.height
+                console.log({w: this.width, h: this.height});
                 this.containerElement = containerElement
                 this.pixi = pixi
                 // new ResizeObserver(() => {
@@ -102,6 +106,7 @@
             }
 
             table_width() {
+                console.log(this.width);
                 return this.width
             }
 
@@ -171,6 +176,7 @@
                         this.draw()
                         this.header.notifyListeners(this.index, this.width)
                         this.header.headerCellWidthChanged(this.index, distance)
+                        e.data.originalEvent.preventDefault();
                     }
                 })
                 
@@ -200,8 +206,9 @@
 
         class DataCell {
 
-            constructor(index, value, x, y, width, height) { 
+            constructor(index, colId, value, x, y, width, height) { 
                 this.index = index
+                this.colId = colId
                 this.value = value
                 this.x = x
                 this.y = y
@@ -209,8 +216,8 @@
                 this.height = height
                 this.container = new PIXI.Container()
                 this.cellG = new PIXI.Graphics()
-                this.text = new PIXI.Text(this.value,{fontFamily : 'Arial', fontSize: 12, fill : 0x1E1E1E, align : 'center'});
-                // this.text = new PIXI.BitmapText("this.value", { fontName: "TableFont" });
+                // this.text = new PIXI.Text(this.value,{fontFamily : 'Arial', fontSize: 12, fill : 0x1E1E1E, align : 'center'});
+                this.text = new PIXI.BitmapText(this.value + "", { fontName: "TableFont" });
                 // this.text.text = this.value;
                 // this.text.text = 'zzz'
                 // this.text.x = this.width/2
@@ -276,7 +283,7 @@
                 })
                 for (let i = 0; i < header.headerCells.length; i++) {
                     const headerCell = header.headerCells[i]
-                    const dataCell = new DataCell(i, index, headerCell.x, this.index * this.height + this.headrOffsetY, headerCell.width, this.height)
+                    const dataCell = new DataCell(i, header.columns[i].id, index, headerCell.x, this.index * this.height + this.headrOffsetY, headerCell.width, this.height)
                     this.cells.push(dataCell)
                     // this.ctx.draw(dataCell.draw())
                 }
@@ -309,7 +316,10 @@
 
             get defaultCellWidth() {
                 // console.log(this.ctx.width/this.columns.length);
-                return this.ctx.width/this.columns.length
+                const def_width = this.ctx.width/this.columns.length
+                // const def_width = this.ctx.pixi.renderer.view.width/this.columns.length
+                // console.log(def_width);
+                return def_width
                 // return 100
             }
 
@@ -328,7 +338,7 @@
                     }
                     if (adjacentResized) {
                         this.headerCells[i-1].width -= distance
-                        // this.notifyListeners(index, this.headerCells[i-1].width) // Not working!
+                        this.notifyListeners(i-1, this.headerCells[i-1].width) // Not working!
                     }
                 }
             }
@@ -400,8 +410,9 @@
                             this.grabber.y = newPos;
                             // console.log(newPos);
                             // console.log(this.scrollY);
-                            this.scrollListener(this.grabber.y)
+                            this.scrollListener(this.grabber.y) // Slow code!
                         }
+                        e.data.originalEvent.preventDefault();
                     }
                 })
                 this.ctx.draw(this.container)
@@ -420,24 +431,32 @@
             static get HEADER_HEIGHT() { return 20 }
 
             constructor(headers, rows, tableWidth, tableHeight) {
+                this.headers = headers.map((h, index) => {
+                    return { label: h, id: h }
+                })
                 this.rows = rows;
                 this.tableWidth = tableWidth;
                 this.tableHeight = tableHeight;
-                this.app = new PIXI.Application({ width: this.tableWidth, height: this.tableHeight });
+                this.app = new PIXI.Application({ width: this.tableWidth, height: this.tableHeight, antialias: true,  });
+                if (this.app.renderer.type == PIXI.RENDERER_TYPE.WEBGL) {
+
+                    console.log('Using WebGL');
+                    console.log(this.app);
+                    } else {
+
+                    console.log(PIXI.RENDERER_TYPE.WEBGL+' Using Canvas: '+ this.app.renderer.type);
+
+                }
+                // this.app.renderer.backgroundColor = 0x061639;
+                // this.app.renderer.autoDensity = true;
+
                 this.ctx = new TableContext(this.tableWidth, this.tableHeight, this.app.view, this.app)
-                this.header = new Header(0, 0, Table.HEADER_HEIGHT, headers, this.ctx)
+                this.header = new Header(0, 0, Table.HEADER_HEIGHT, this.headers, this.ctx)
                 this.scrollbar = new ScrollBar(this.tableWidth - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.tableHeight-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
                 this.scrollbar.setScrollListener((y)=>{
-                                        
-                    // this.renderRows(this.visibleRowStart)
-                    // const p = Math.floor((y/(this.scrollbar.barHeight - this.scrollbar.grabberHeight)) * this.rows.length)
                     const p = Math.floor((Math.round(y)/(this.scrollbar.barHeight - this.scrollbar.grabberHeight)) * this.rows.length)
-                    // const p = Math.floor((y/(this.scrollbar.barHeight - this.scrollbar.grabberHeight)) * 100)
-                    // const p = (y/(this.scrollbar.barHeight - this.scrollbar.grabberHeight) * 100)
-                    // console.log(this.rows.length+'===');
-                    // console.log(p);
-                    // console.log(y);
-                    this.renderRows(p)
+                    // this.renderRows(p)
+                    this.updateRows(p)
                 })
                 this.renderedRows = []
                 this.dataCellContainer = new PIXI.Container()
@@ -447,7 +466,14 @@
                 // **************** Rendering rows ***********************************
                 // this.app.ticker.add(() => this.draw());
                 // this.header.draw(100)
-                document.querySelector('.tbl').appendChild(this.app.view);
+                const mountTarget = document.querySelector('.tbl')
+                // ******************** To position table to the div ****************************
+                // this.app.renderer.view.style.position = "absolute";
+                // this.app.renderer.view.style.display = "block";
+                // this.app.renderer.autoDensity = true;
+                // this.app.resizeTo = mountTarget
+                // **************** END ********************************
+                mountTarget.appendChild(this.app.view);
             }
             
             renderRows(fromIndex) {
@@ -457,17 +483,45 @@
                     if (!this.renderedRows[i]) {
                         // console.log({fromIndex, toIndex: fromIndex + this.viewPortRowCount});
                         // console.log({fromIndex, to: fromIndex + this.viewPortRowCount});
-                        const row = new Row(headers, i, Table.HEADER_HEIGHT, this.header, this.ctx, this)
+                        const row = new Row(this.headers, i, Table.HEADER_HEIGHT, this.header, this.ctx, this)
                         // **************************** Add data cells to a group and render them ****************************
                         for (let j = 0; j < row.cells.length; j++) {
                             this.dataCellContainer.addChild(row.cells[j].draw());
                         }
                         this.renderedRows[i] = row
+                        // console.log(row);
                     }
                     // this.addColumnChangedListener()
                     // this.rowG = new PIXI.Graphics()
                 }
+                console.log(this.renderedRows);
                 this.dataCellContainer.y = fromIndex * -Table.HEADER_HEIGHT
+            }
+
+            updateRows(fromIndex) { //986 = 987 1000 - 17 
+                // console.log(this.renderedRows[0]);
+                // console.log(this.rows[0]);
+                if (fromIndex > this.rows.length - this.viewPortRowCount) {
+                    console.log('reject: '+this.viewPortRowCount);
+                    console.log({fromIndex});
+                    return
+                }
+                console.log(this.renderedRows);
+                for ( let i = 0; i < this.viewPortRowCount; i++ ) {
+                    const dataRow = this.rows[fromIndex + i]
+                    if (!dataRow) {
+                        console.log('ret: '+fromIndex+' == '+i);
+                        break
+                        // for (const dataCell of this.renderedRows[i].cells) {
+                        //     dataCell.text.text = ""
+                        // }
+                    } else {
+                        for (const dataCell of this.renderedRows[i].cells) {
+                            console.log({dataRow, fromIndex, i});
+                            dataCell.text.text = dataRow[dataCell.colId]
+                        }
+                    }
+                }
             }
 
             get visibleRowStart () { return Math.floor(this.scrollbar.scrollY/Table.HEADER_HEIGHT) }
@@ -479,7 +533,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 1000; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000', price: 1000.00 })
         }
         new Table(headers, rows, table_width, table_height)
@@ -509,6 +563,12 @@
         body div {
             background-color: darkgrey;
         }
+
+        .tbl {
+            width: 800px;
+            height: 500px;
+        }
+
     </style>
 
 
