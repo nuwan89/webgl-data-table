@@ -365,34 +365,64 @@
                 this.barWidth = barWidth;
                 this.barHeight = barHeight;
                 this.grabberWidth = graberWidth;
-                this.grabberHeight = 50;
+                this.grabberHeight = 40;
                 this.ctx = context;
+                this.curStartIndex = 0
                 this.scrolling = false
                 this.bar = new PIXI.Graphics()
                 this.bar.lineStyle(1, 0xB5B5B5)
                 this.bar.beginFill(0xB5B5B5)
                 this.bar.drawRect(0, 0, this.barWidth, this.barHeight)
+                this.scrollBtnSize = this.grabberWidth
+                this.topScrollBtn = new PIXI.Graphics()
+                this.topScrollBtn.lineStyle(1, 0xff0000)
+                this.topScrollBtn.beginFill(0x979797)
+                this.topScrollBtn.interactive = true
+                this.topScrollBtn.drawRect(0, 0, this.scrollBtnSize, this.scrollBtnSize)
+                this.topScrollBtn.hitArea = new PIXI.Rectangle(0, 0, this.scrollBtnSize, this.scrollBtnSize);
+                this.topScrollBtn.on('pointerdown', (e) => {
+                    this.scrollButtonListener('up', this.grabber.y)
+                    let curTop = this.grabber.y
+                    // console.log(curTop);
+                    // let p = ((this.barHeight - this.grabberHeight - (2*this.scrollBtnSize))/this.rows.length)
+                    // this.grabber.y = p
+                    // this.grabEvent = e.data
+                    // this.offY = this.grabber.y - this.grabEvent.getLocalPosition(this.container).y;
+                    // this.scrolling = true
+                    // console.log(this.topScrollBtn.width);
+                });
+                this.botScrollBtn = new PIXI.Graphics()
+                this.botScrollBtn.lineStyle(1, 0xff0000)
+                this.botScrollBtn.beginFill(0x979797)
+                this.botScrollBtn.interactive = true
+                this.botScrollBtn.drawRect(0, this.barHeight - this.scrollBtnSize, this.scrollBtnSize, this.scrollBtnSize)
+                this.botScrollBtn.hitArea = new PIXI.Rectangle(0, this.barHeight - this.scrollBtnSize, this.scrollBtnSize, this.scrollBtnSize);
                 this.grabber = new PIXI.Graphics()
-                this.grabber.x = 0
-                this.grabber.y = 0
+                // this.grabber.x = 0
+                // this.grabber.y = this.scrollBtnSize
+                // console.log(this.grabber.y);
+                // this.grabber.y = 6//this.scrollBtnSize
                 // this.grabber.anchor = 0.5;
                 this.grabber.interactive = true
                 this.grabber.hitArea = new PIXI.Rectangle(0, this.grabber.y, this.grabberWidth, this.grabberHeight);
-                this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0x979797)
+                this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0x009700)
                 // this.grabber.lineStyle(ScrollBar.GRABBER_THICKNESS, 0xB5B5B5)
                 this.grabber.beginFill(0x979797)
-                this.grabber.drawRect(0, this.grabber.y, this.grabberWidth, this.grabberHeight)
+                this.grabber.drawRect(0, this.scrollBtnSize, this.grabberWidth, this.grabberHeight)
                 this.grabber.hitArea = new PIXI.Rectangle(0, this.grabber.y, this.grabberWidth, this.grabberHeight);
                 this.container = new PIXI.Container()
                 this.container.zIndex = 10
                 this.container.addChild(this.bar)
                 this.container.addChild(this.grabber)
+                this.container.addChild(this.topScrollBtn)
+                this.container.addChild(this.botScrollBtn)
                 this.container.x = this.x
                 this.container.y = this.y
                 this.grabber.on('pointerdown', (e) => {
                     this.grabEvent = e.data
                     this.offY = this.grabber.y - this.grabEvent.getLocalPosition(this.container).y;
                     this.scrolling = true
+                    console.log(this.topScrollBtn.width);
                 });
                 this.grabber.on('pointerup', (e) => {
                     this.scrolling = false
@@ -404,10 +434,10 @@
                 });
                 this.grabber.on('pointermove', (e)=>{
                     if (this.scrolling) {
-                        const newPos = this.grabEvent.getLocalPosition(this.container).y + this.offY;
+                        const newPosY = this.grabEvent.getLocalPosition(this.container).y + this.offY;
                         // if (newPos >= 0 && newPos <= this.barHeight - this.grabberHeight - ScrollBar.GRABBER_THICKNESS) {
-                        if (newPos >= 0 && newPos <= this.barHeight - this.grabberHeight) {
-                            this.grabber.y = newPos;
+                        if (newPosY >= 0 && newPosY <= this.barHeight - this.grabberHeight - (2 * this.scrollBtnSize)) {
+                            this.grabber.y = newPosY;
                             // console.log(newPos);
                             // console.log(this.scrollY);
                             this.scrollListener(this.grabber.y) // Slow code!
@@ -420,6 +450,10 @@
 
             setScrollListener(func) {
                 this.scrollListener = func
+            }
+
+            setScrollButtonListener(func) {
+                this.scrollButtonListener = func
             }
 
             get scrollY () { return this.grabber.y; }
@@ -454,9 +488,24 @@
                 this.header = new Header(0, 0, Table.HEADER_HEIGHT, this.headers, this.ctx)
                 this.scrollbar = new ScrollBar(this.tableWidth - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.tableHeight-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
                 this.scrollbar.setScrollListener((y)=>{
-                    const p = Math.floor((Math.round(y)/(this.scrollbar.barHeight - this.scrollbar.grabberHeight)) * this.rows.length)
+                    const p = Math.floor((Math.round(y)/(this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize))) * this.rows.length)
+                    this.scrollbar.curStartIndex = p
                     // this.renderRows(p)
                     this.updateRows(p)
+                })
+                this.scrollbar.setScrollButtonListener((direction, grabberY) => {
+                    if (direction == 'up') {
+                        const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
+                        // console.log('render up: '+(movableLength));
+                        let p = movableLength/this.rows.length
+                        this.scrollbar.grabber.y -= p
+                        // // console.log(p);
+                        // this.updateRows(Math.floor(grabberY/p))
+                        this.scrollbar.curStartIndex -= 1
+                        this.updateRows(this.scrollbar.curStartIndex)
+                    } else {
+                        console.log('render down');
+                    }
                 })
                 this.renderedRows = []
                 this.dataCellContainer = new PIXI.Container()
@@ -501,23 +550,31 @@
             updateRows(fromIndex) { //986 = 987 1000 - 17 
                 // console.log(this.renderedRows[0]);
                 // console.log(this.rows[0]);
-                if (fromIndex > this.rows.length - this.viewPortRowCount) {
-                    console.log('reject: '+this.viewPortRowCount);
-                    console.log({fromIndex});
-                    return
-                }
-                console.log(this.renderedRows);
+                // if (fromIndex > this.rows.length - this.viewPortRowCount) {
+                //     const remaining = this.rows.length - fromIndex
+                //     for ( let i = 0; i < remaining; i++ ) {
+                //         const dataRow = this.rows[fromIndex + i]
+                //         for (const dataCell of this.renderedRows[i].cells) {
+                //             // console.log({dataRow, fromIndex, i});
+                //             dataCell.text.text = dataRow[dataCell.colId]
+                //         }
+                //     }
+                //     console.log('reject: '+this.viewPortRowCount);
+                //     console.log({fromIndex});
+
+                //     return
+                // }
+                // console.log(this.renderedRows);
                 for ( let i = 0; i < this.viewPortRowCount; i++ ) {
                     const dataRow = this.rows[fromIndex + i]
                     if (!dataRow) {
-                        console.log('ret: '+fromIndex+' == '+i);
-                        break
-                        // for (const dataCell of this.renderedRows[i].cells) {
-                        //     dataCell.text.text = ""
-                        // }
+                        // break
+                        for (const dataCell of this.renderedRows[i].cells) {
+                            dataCell.text.text = ""
+                        }
                     } else {
                         for (const dataCell of this.renderedRows[i].cells) {
-                            console.log({dataRow, fromIndex, i});
+                            // console.log({dataRow, fromIndex, i});
                             dataCell.text.text = dataRow[dataCell.colId]
                         }
                     }
@@ -534,7 +591,7 @@
 
         let rows = []
         for (let i = 0; i < 1000; i++) {
-            rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000', price: 1000.00 })
+            rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000'+i, price: (1000.00 + i) })
         }
         new Table(headers, rows, table_width, table_height)
 
