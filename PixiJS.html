@@ -433,13 +433,17 @@
                     if (this.scrolling) {
                         const newPosY = this.grabEvent.getLocalPosition(this.container).y + this.offY;
                         // if (newPos0 >= 0 && newPos <= this.barHeight - this.grabberHeight - ScrollBar.GRABBER_THICKNESS) {
-                            e.data.originalEvent.preventDefault();
-                        console.log(newPosY);
-                        if (newPosY >= 0 && newPosY <= this.barHeight - this.grabberHeight - (2 * this.scrollBtnSize)) {
+                        e.data.originalEvent.preventDefault();
+                        // console.log(newPosY);
+                        const movableLength = this.barHeight - this.grabberHeight - (2 * this.scrollBtnSize)
+                        if (newPosY >= 0 && newPosY <= movableLength) {
                             this.grabber.y = newPosY;
                             this.scrollListener(this.grabber.y) // Used to be Slow code :)
                         } else if (newPosY < this.grabber.y && this.grabber.y > 0) {
                             this.grabber.y = 0
+                            this.scrollListener(this.grabber.y)
+                        } else if (newPosY > this.grabber.y && this.grabber.y < movableLength) {
+                            this.grabber.y = movableLength
                             this.scrollListener(this.grabber.y)
                         }
                     }
@@ -487,17 +491,27 @@
                 this.header = new Header(0, 0, Table.HEADER_HEIGHT, this.headers, this.ctx)
                 this.scrollbar = new ScrollBar(this.tableWidth - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.tableHeight-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
                 this.scrollbar.setScrollListener((y)=>{
-                    const p = Math.floor((Math.round(y)/(this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize))) * this.rows.length)
-                    this.scrollbar.curStartIndex = p
+                    const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
+                    let p = Math.floor((Math.round(y)/movableLength) * this.rows.length)
+                    let isLastPage
+                    if (p > this.rows.length - this.viewPortRowCount) {
+                        p = this.rows.length - this.viewPortRowCount
+                        isLastPage = true
+                    } else {
+                        this.scrollbar.curStartIndex = p
+                    }
+                    console.log(p+" "+this.scrollbar.curStartIndex);
                     // this.renderRows(p)
-                    this.updateRows(p)
+                    this.updateRows(p, isLastPage);
                 })
                 this.scrollbar.setScrollButtonListener((direction, grabberY) => {
                     const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
                     let p = movableLength/this.rows.length
                     if (direction == 'up') {
                         this.scrollbar.grabber.y -= p
+                        console.log(this.scrollbar.curStartIndex);
                         this.scrollbar.curStartIndex -= 1
+                        console.log(this.scrollbar.curStartIndex);
                         this.updateRows(this.scrollbar.curStartIndex)
                     } else {
                         this.scrollbar.grabber.y += p
@@ -541,11 +555,11 @@
                     // this.addColumnChangedListener()
                     // this.rowG = new PIXI.Graphics()
                 }
-                console.log(this.renderedRows);
+                // console.log(this.renderedRows);
                 this.dataCellContainer.y = fromIndex * -Table.HEADER_HEIGHT
             }
 
-            updateRows(fromIndex) { //986 = 987 1000 - 17 
+            updateRows(fromIndex, lastPage) { //986 = 987 1000 - 17 
                 // console.log(this.renderedRows[0]);
                 // console.log(this.rows[0]);
                 // if (fromIndex > this.rows.length - this.viewPortRowCount) {
@@ -565,8 +579,16 @@
                 // console.log(this.renderedRows);
                 for ( let i = 0; i < this.viewPortRowCount; i++ ) {
                     const dataRow = this.rows[fromIndex + i]
-                    if (!dataRow) {
+                    if (fromIndex + i > this.rows.length - this.viewPortRowCount) {
+                        // console.log('staaaaaaaap: '+fromIndex+' + '+i+' = '+(fromIndex + i));
+                        fromIndex = this.rows.length - this.viewPortRowCount
+                        if (lastPage) {
+                            console.log(this.scrollbar.curStartIndex);
+                        }
+                        this.scrollbar.curStartIndex = lastPage ? this.scrollbar.curStartIndex : fromIndex
                         // break
+                    }
+                    if (!dataRow) {
                         for (const dataCell of this.renderedRows[i].cells) {
                             dataCell.text.text = ""
                         }
@@ -574,6 +596,7 @@
                         for (const dataCell of this.renderedRows[i].cells) {
                             // console.log({dataRow, fromIndex, i});
                             dataCell.text.text = dataRow[dataCell.colId]
+                            // console.log(dataRow[dataCell.colId]);
                         }
                     }
                 }
@@ -588,7 +611,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 100000; i++) {
+        for (let i = 0; i < 1000; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000'+i, price: (1000.00 + i) })
         }
         new Table(headers, rows, table_width, table_height)
