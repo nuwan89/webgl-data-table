@@ -419,7 +419,7 @@
                     this.grabEvent = e.data
                     this.offY = this.grabber.y - this.grabEvent.getLocalPosition(this.container).y;
                     this.scrolling = true
-                    console.log(this.grabber.y);
+                    // console.log(this.grabber.y);
                 });
                 this.grabber.on('pointerup', (e) => {
                     this.scrolling = false
@@ -493,25 +493,24 @@
                 this.scrollbar.setScrollListener((y)=>{
                     const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
                     let p = Math.floor((Math.round(y)/movableLength) * this.rows.length)
-                    let isLastPage
-                    if (p > this.rows.length - this.viewPortRowCount) {
-                        p = this.rows.length - this.viewPortRowCount
-                        isLastPage = true
-                    } else {
-                        this.scrollbar.curStartIndex = p
-                    }
-                    console.log(p+" "+this.scrollbar.curStartIndex);
+                    // if (p > this.rows.length - this.viewPortRowCount) {
+                    //     p = this.rows.length - this.viewPortRowCount
+                    //     isLastPage = true
+                    // } else {
+                    //     this.scrollbar.curStartIndex = p
+                    // }
+                    // console.log(p+" "+this.scrollbar.curStartIndex);
                     // this.renderRows(p)
-                    this.updateRows(p, isLastPage);
+                    this.updateRows(p);
                 })
                 this.scrollbar.setScrollButtonListener((direction, grabberY) => {
                     const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
                     let p = movableLength/this.rows.length
                     if (direction == 'up') {
                         this.scrollbar.grabber.y -= p
-                        console.log(this.scrollbar.curStartIndex);
+                        // console.log(this.scrollbar.curStartIndex);
                         this.scrollbar.curStartIndex -= 1
-                        console.log(this.scrollbar.curStartIndex);
+                        // console.log(this.scrollbar.curStartIndex);
                         this.updateRows(this.scrollbar.curStartIndex)
                     } else {
                         this.scrollbar.grabber.y += p
@@ -559,7 +558,8 @@
                 this.dataCellContainer.y = fromIndex * -Table.HEADER_HEIGHT
             }
 
-            updateRows(fromIndex, lastPage) { //986 = 987 1000 - 17 
+            updateRows(fromIndex) { //986 = 987 1000 - 17 
+                // console.log(fromIndex);
                 // console.log(this.renderedRows[0]);
                 // console.log(this.rows[0]);
                 // if (fromIndex > this.rows.length - this.viewPortRowCount) {
@@ -577,28 +577,21 @@
                 //     return
                 // }
                 // console.log(this.renderedRows);
+
+                let lastPg
+
+                if (fromIndex >= this.rows.length - this.viewPortRowCount) {
+                    fromIndex = this.rows.length - this.viewPortRowCount
+                    this.scrollbar.curStartIndex = fromIndex
+                    lastPg = true
+                }
+
                 for ( let i = 0; i < this.viewPortRowCount; i++ ) {
                     const dataRow = this.rows[fromIndex + i]
-                    if (fromIndex + i > this.rows.length - this.viewPortRowCount) {
-                        // console.log('staaaaaaaap: '+fromIndex+' + '+i+' = '+(fromIndex + i));
-                        fromIndex = this.rows.length - this.viewPortRowCount
-                        if (lastPage) {
-                            console.log(this.scrollbar.curStartIndex);
-                        }
-                        this.scrollbar.curStartIndex = lastPage ? this.scrollbar.curStartIndex : fromIndex
-                        // break
+                    for (const dataCell of this.renderedRows[i].cells) {
+                        dataCell.text.text = dataRow[dataCell.colId]
                     }
-                    if (!dataRow) {
-                        for (const dataCell of this.renderedRows[i].cells) {
-                            dataCell.text.text = ""
-                        }
-                    } else {
-                        for (const dataCell of this.renderedRows[i].cells) {
-                            // console.log({dataRow, fromIndex, i});
-                            dataCell.text.text = dataRow[dataCell.colId]
-                            // console.log(dataRow[dataCell.colId]);
-                        }
-                    }
+                    this.scrollbar.curStartIndex = !lastPg ? fromIndex : this.scrollbar.curStartIndex
                 }
             }
 
@@ -611,7 +604,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 20000000; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000'+i, price: (1000.00 + i) })
         }
         new Table(headers, rows, table_width, table_height)
