@@ -192,7 +192,7 @@
                 this.container.y = this.y
                 return this.container
             }
-            
+
             setX(x) {
                 this.x = x
                 this.container.x = this.x
@@ -413,6 +413,10 @@
                 this.scrollButtonListener = func
             }
 
+            triggerScrollButton(direction) { 
+                this.scrollButtonListener(direction, this.grabber.y)
+            }
+
             get scrollY () { return this.grabber.y; }
         }
 
@@ -478,6 +482,7 @@
                     this.scrollbar.setScrollButtonListener((direction, grabberY) => {
                         const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
                         let p = movableLength/this.rows.length
+                        console.log('cl: '+p);
                         if (direction == 'up') {
                             this.scrollbar.grabber.y -= p
                             this.scrollbar.curStartIndex -= 1
@@ -499,6 +504,21 @@
                 
                 }).observe(this.app.view)
 
+                // *************** Scroll listener ********************************
+                this.mousePosition = new PIXI.Point();
+                this.app.view.addEventListener('mousewheel', (ev) => {
+                    this.app.renderer.plugins.interaction.mapPositionToPoint(this.mousePosition, ev.x, ev.y); // get global position in world coordinates
+                    ev.preventDefault()
+                    const scrollDirection = ev.deltaY < 0 ? 'up' : 'down';
+                    // console.log(ev);
+                    // console.log(scrollDirection);
+                    this.scrollbar.triggerScrollButton(scrollDirection)
+                    // returns element directly under mouse
+                    // const found = this.app.renderer.plugins.interaction.hitTest(
+                    //     this.mousePosition,
+                    //     this.app.stage
+                    // );
+                });
         // }, app.view)
             }
             
@@ -544,7 +564,7 @@
         }
 
         let rows = []
-        for (let i = 0; i < 20000; i++) {
+        for (let i = 0; i < 50; i++) {
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000'+i, price: (1000.00 + i) })
         }
         
