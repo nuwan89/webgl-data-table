@@ -19,6 +19,25 @@
     <button onclick="changeWidth()">increase canvas width</button>
     <button onclick="shrinkWidth()">shrink canvas width</button>
 
+    <style>
+        body {
+            background-color: burlywood;
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(2, 1fr);
+
+        }
+        body div {
+            background-color: darkgrey;
+        }
+
+        .tbl {
+            width: 800px;
+            height: 500px;
+        }
+
+    </style>
+
 
     <script>
         // https://github.com/kittykatattack/learningPixi#application
@@ -51,13 +70,15 @@
 
 
         class TableContext {
-            constructor(width, height, containerElement, pixi) {
+            constructor(width, height, containerElement, pixi, table) {
                 
                 this.width = pixi.renderer.view.width
                 this.height = pixi.renderer.view.height
                 console.log({w: this.width, h: this.height});
                 this.containerElement = containerElement
                 this.pixi = pixi
+                this.table = table
+                this.pixi.stage.sortableChildren = true
                 // new ResizeObserver(() => {
                 //     console.log("Width: " + this.containerElement.offsetWidth + " Hh: " + this.containerElement.offsetHeight);
 
@@ -65,12 +86,11 @@
             }
 
             table_width() {
-                console.log(this.width);
-                return this.width
+                // console.log(this.width);
+                return this.table.tableWidth
             }
 
             draw(graphics) {
-                this.pixi.stage.sortableChildren = true
                 this.pixi.stage.addChild(graphics)
             }
             
@@ -281,6 +301,12 @@
                 this.bar.beginFill(0xB5B5B5)
                 this.bar.drawRect(0, 0, this.barWidth, this.barHeight)
                 this.scrollBtnSize = this.grabberWidth
+                // *************** Drawing Arrow ********************************
+                let topArrow = new PIXI.Graphics()
+                topArrow.beginFill(0x000000)
+                topArrow.drawPolygon([1, this.scrollBtnSize-1, this.scrollBtnSize/2, 1, this.scrollBtnSize-1, this.scrollBtnSize-1 ])
+                topArrow.endFill()
+                // *************** END ********************************
                 this.topScrollBtn = new PIXI.Graphics()
                 this.topScrollBtn.lineStyle(1, 0xff0000)
                 this.topScrollBtn.beginFill(0x979797)
@@ -291,6 +317,17 @@
                     e.data.originalEvent.preventDefault();
                     this.scrollButtonListener('up', this.grabber.y)
                 });
+                // *************** Drawing Arrow ********************************
+                let botArrow = new PIXI.Graphics()
+                botArrow.beginFill(0x000000)
+                // botArrow.lineStyle(1, 0xff0000)
+                botArrow.drawPolygon([
+                    1, this.barHeight - this.scrollBtnSize + 1, 
+                    this.scrollBtnSize/2, this.barHeight - this.scrollBtnSize + this.scrollBtnSize-1,
+                    // this.scrollBtnSize/2, this.barHeight - this.scrollBtnSize + this.scrollBtnSize-1, ])
+                    this.scrollBtnSize-1, this.barHeight - this.scrollBtnSize + 1 ])
+                botArrow.endFill()
+                // *************** END ********************************
                 this.botScrollBtn = new PIXI.Graphics()
                 this.botScrollBtn.lineStyle(1, 0xff0000)
                 this.botScrollBtn.beginFill(0x979797)
@@ -313,7 +350,9 @@
                 this.container.addChild(this.bar)
                 this.container.addChild(this.grabber)
                 this.container.addChild(this.topScrollBtn)
+                this.container.addChild(topArrow)
                 this.container.addChild(this.botScrollBtn)
+                this.container.addChild(botArrow)
                 this.container.x = this.x
                 this.container.y = this.y
                 this.grabber.on('pointerdown', (e) => {
@@ -349,6 +388,12 @@
                 this.ctx.draw(this.container)
             }
 
+            clear() { 
+                // this.container.clear()
+                this.container.parent.removeChild(this.container)
+                this.container.destroy({children:true, texture:true, baseTexture:true});
+            }
+
             setScrollListener(func) {
                 this.scrollListener = func
             }
@@ -365,14 +410,18 @@
             static get SCROLL_WIDTH() { return 10 }
             static get HEADER_HEIGHT() { return 20 }
 
-            constructor(headers, rows, tableWidth, tableHeight) {
+            get tableHeight() { return this._tableHeight}
+            get tableWidth() { return this._tableWidth}
+            set tableWidth(width) { this._tableWidth = width}
+            set tableHeight(height) { this._tableHeight = height}
+
+            constructor(headers, rows, mountTarget) {
                 this.headers = headers.map((h, index) => {
                     return { label: h, id: h }
                 })
                 this.rows = rows;
-                this.tableWidth = tableWidth;
-                this.tableHeight = tableHeight;
-                this.app = new PIXI.Application({ width: this.tableWidth, height: this.tableHeight, antialias: true,  });
+                this.mountTarget = mountTarget
+                this.app = new PIXI.Application({ antialias: false,  });
                 if (this.app.renderer.type == PIXI.RENDERER_TYPE.WEBGL) {
 
                     console.log('Using WebGL');
@@ -383,43 +432,60 @@
 
                 }
 
-                this.ctx = new TableContext(this.tableWidth, this.tableHeight, this.app.view, this.app)
-                this.header = new Header(0, 0, Table.HEADER_HEIGHT, this.headers, this.ctx)
-                this.scrollbar = new ScrollBar(this.tableWidth - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.tableHeight-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
-                this.scrollbar.setScrollListener((y)=>{
-                    const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
-                    let p = Math.floor((Math.round(y)/movableLength) * this.rows.length)
-                    this.updateRows(p);
-                })
-                this.scrollbar.setScrollButtonListener((direction, grabberY) => {
-                    const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
-                    let p = movableLength/this.rows.length
-                    if (direction == 'up') {
-                        this.scrollbar.grabber.y -= p
-                        this.scrollbar.curStartIndex -= 1
-                        this.updateRows(this.scrollbar.curStartIndex)
-                    } else {
-                        this.scrollbar.grabber.y += p
-                        this.scrollbar.curStartIndex += 1
-                        this.updateRows(this.scrollbar.curStartIndex)
-                    }
-                })
-                this.renderedRows = []
-                this.dataCellContainer = new PIXI.Container()
-                this.renderRows(this.visibleRowStart)
-                this.ctx.draw(this.dataCellContainer)
                 // console.log(this.scrollbar.scrollY);
                 // **************** Rendering rows ***********************************
-                // this.app.ticker.add(() => this.draw());
+                // this.app.ticker.add(() => console.log('this.'));
                 // this.header.draw(100)
-                const mountTarget = document.querySelector('.tbl')
+                
                 // ******************** To position table to the div ****************************
-                // this.app.renderer.view.style.position = "absolute";
-                // this.app.renderer.view.style.display = "block";
-                // this.app.renderer.autoDensity = true;
-                // this.app.resizeTo = mountTarget
+                this.app.renderer.view.style.position = "absolute";
+                this.app.renderer.view.style.display = "block";
+                this.app.renderer.autoDensity = true;
+                this.app.resizeTo = this.mountTarget
                 // **************** END ********************************
-                mountTarget.appendChild(this.app.view);
+                console.log(this.app.view.offsetHeight+" "+this.app.view.offsetWidth);
+                this.mountTarget.appendChild(this.app.view);
+                new ResizeObserver(() => {
+                    console.log("Width: " + this.app.view.offsetWidth + " H: " + this.app.view.offsetHeight);
+                    this.tableWidth = this.app.view.offsetWidth
+                    this.tableHeight = this.app.view.offsetHeight
+
+                    this.ctx = new TableContext(this.tableWidth, this.tableHeight, this.app.view, this.app, this)
+                    this.header = new Header(0, 0, Table.HEADER_HEIGHT, this.headers, this.ctx)
+                    if (this.scrollbar) {
+                        this.scrollbar.clear()
+                    }
+                    this.scrollbar = new ScrollBar(this.tableWidth - Table.SCROLL_WIDTH, Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.tableHeight-Table.HEADER_HEIGHT, Table.SCROLL_WIDTH, this.ctx)
+                    this.scrollbar.setScrollListener((y)=>{
+                        const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
+                        let p = Math.floor((Math.round(y)/movableLength) * this.rows.length)
+                        this.updateRows(p);
+                    })
+                    this.scrollbar.setScrollButtonListener((direction, grabberY) => {
+                        const movableLength = this.scrollbar.barHeight - this.scrollbar.grabberHeight - (2*this.scrollbar.scrollBtnSize)
+                        let p = movableLength/this.rows.length
+                        if (direction == 'up') {
+                            this.scrollbar.grabber.y -= p
+                            this.scrollbar.curStartIndex -= 1
+                            this.updateRows(this.scrollbar.curStartIndex)
+                        } else {
+                            this.scrollbar.grabber.y += p
+                            this.scrollbar.curStartIndex += 1
+                            this.updateRows(this.scrollbar.curStartIndex)
+                        }
+                    })
+                    this.renderedRows = []
+                    if (this.dataCellContainer) {
+                        this.dataCellContainer.parent.removeChild(this.dataCellContainer)
+                        this.dataCellContainer.destroy({children:true, texture:true, baseTexture:true});
+                    }
+                    this.dataCellContainer = new PIXI.Container()
+                    this.renderRows(this.visibleRowStart)
+                    this.ctx.draw(this.dataCellContainer)
+                
+                }).observe(this.app.view)
+
+        // }, app.view)
             }
             
             renderRows(fromIndex) {
@@ -450,7 +516,7 @@
                 for ( let i = 0; i < this.viewPortRowCount; i++ ) {
                     const dataRow = this.rows[fromIndex + i]
                     for (const dataCell of this.renderedRows[i].cells) {
-                        dataCell.text.text = dataRow[dataCell.colId]
+                        dataCell.text.text = dataRow[dataCell.colId] // TODO: error on resize
                     }
                     this.scrollbar.curStartIndex = !lastPg ? fromIndex : this.scrollbar.curStartIndex
                 }
@@ -468,35 +534,15 @@
             rows.push({ id: i, name: 'Product - ' + i, description: 'Desc000000'+i, price: (1000.00 + i) })
         }
         
-        new Table(headers, rows, 640, 360)
+        const mountTarget = document.querySelector('.tbl')
+        console.log(mountTarget);
+        new Table(headers, rows, mountTarget)
 
 
-//    new ResizeObserver(() => {
-//                     console.log("Width: " + app.view.offsetWidth + " H: " + app.view.offsetHeight);
-                    
-//                 }).observe(app.view)
 
-        // }, app.view)
     </script>   
 
-    <style>
-        body {
-            background-color: burlywood;
-            display: grid;
-            gap: 1rem;
-            grid-template-columns: repeat(2, 1fr);
 
-        }
-        body div {
-            background-color: darkgrey;
-        }
-
-        .tbl {
-            width: 800px;
-            height: 500px;
-        }
-
-    </style>
 
 </body>
 </html>
