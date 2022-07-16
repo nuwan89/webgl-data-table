@@ -144,6 +144,11 @@
                 
             }
 
+            clear () { 
+                this.container.parent.removeChild(this.container)
+                this.container.destroy({children:true, texture:true, baseTexture:true});
+            }
+
             draw() {
                 this.g.clear()
                 this.g.lineStyle(1, 0xB5B5B5);
@@ -248,6 +253,12 @@
 
             addColumnChangedListener(listener) { 
                 this.columnListeners.push(listener)
+            }
+
+            clear() { 
+                for(let i = 0; i < this.headerCells.length; i++) {
+                    this.headerCells[i].clear()
+                }
             }
 
             get defaultCellWidth() {
@@ -451,6 +462,9 @@
                     this.tableHeight = this.app.view.offsetHeight
 
                     this.ctx = new TableContext(this.tableWidth, this.tableHeight, this.app.view, this.app, this)
+                    if (this.header) {
+                        this.header.clear()
+                    }
                     this.header = new Header(0, 0, Table.HEADER_HEIGHT, this.headers, this.ctx)
                     if (this.scrollbar) {
                         this.scrollbar.clear()
