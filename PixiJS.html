@@ -110,7 +110,7 @@
                 this.handle.interactive = true;
                 this.handle.cursor = 'col-resize'
                 this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
-                this.text = new PIXI.Text('Id: '+this.width,{fontFamily : 'Arial', fontSize: 16, fill : 0x1E1E1E, align : 'center'});
+                this.text = new PIXI.Text(this.header.columns[index].label, {fontFamily : 'Arial', fontSize: 16, fill : 0x1E1E1E, align : 'center'});
                 this.text.x = this.width/2
                 this.container = new PIXI.Container();
                 this.container.zIndex = 100
@@ -159,7 +159,7 @@
                 this.handle.beginFill(0x797979)
                 this.handle.drawRect(this.width - 0, 0, 1, this.height - 4)
                 this.handle.hitArea = new PIXI.Rectangle(this.width - 4, 2, 10, this.height - 4);
-                this.text.text = "w: " + (Math.floor(this.container.width))
+                // this.text.text = "w: " + (Math.floor(this.container.width))
                 this.text.x = this.width/2
                 this.container.x = this.x
                 return this.container
