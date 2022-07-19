@@ -48,7 +48,13 @@
             fontFamily: "Arial",
             fontSize: 12,
             // strokeThickness: 2,
-            fill: "purple"
+            fill: "purple",
+        //     chars: [
+        //     ['a', 'z'],
+        //     ['0', '9'],
+        //     ['A', 'Z'],
+        //     ' .!?'
+        // ]
         });
 
         const tx = new PIXI.BitmapText("xxx", { fontName: "TableFont" });
@@ -172,15 +178,23 @@
                 this.index = index
                 this.colId = colId
                 this.value = value
+                this.displayValue = value + ""
                 this.x = x
                 this.y = y
                 this.width = width
                 this.height = height
                 this.container = new PIXI.Container()
                 this.cellG = new PIXI.Graphics()
-                this.text = new PIXI.BitmapText(this.value + "", { fontName: "TableFont" });
+                // this.text = new PIXI.BitmapText(this.displayValue + "", { fontName: "TableFont" }); // Special characters not displayed
+                this.text = new PIXI.Text(this.displayValue + "", {fontFamily : 'Arial', fontSize: 12, fill : 'purple', align : 'center'});
+                this.textElipsis = new PIXI.Text("..", {fontFamily : 'Arial', fontSize: 12, fill : 'purple', align : 'center', fontWeight: 'bold',});
+                this.textElipsis.visible = false;
+                this.textElipsis.x = this.width - this.textElipsis.width
+                this.elipsisBox = new PIXI.Graphics()
                 this.container.addChild(this.cellG)
                 this.container.addChild(this.text)
+                this.container.addChild(this.elipsisBox)
+                this.container.addChild(this.textElipsis)
             }
             
             draw() { 
@@ -188,6 +202,10 @@
                 this.cellG.lineStyle(1, 0xB5B5B5)
                 this.cellG.beginFill(0xF2F2F2);
                 this.cellG.drawRect(0, 0, this.width, this.height)
+                this.elipsisBox.clear()
+                this.elipsisBox.beginFill(0xF2F2F2);
+                this.textElipsis.x = this.width - this.textElipsis.width
+                this.elipsisBox.drawRect(this.width - this.textElipsis.width, 2, this.textElipsis.width, this.height)
                 this.container.x = this.x
                 this.container.y = this.y
                 return this.container
@@ -200,7 +218,26 @@
 
             setWidth(width) {
                 this.width = width
+                this.adjustTextLength()
                 this.draw()
+            }
+
+            updateText(text) {
+                this.value = text + ""
+                this.adjustTextLength()
+            }
+            
+            adjustTextLength() { 
+                this.text.text = this.displayValue + ""
+                let tempText = this.displayValue
+                if ( this.text.width >= this.width) { 
+                    this.textElipsis.visible = true;
+                    this.elipsisBox.visible = true;
+                } else {
+                    this.textElipsis.visible = false;
+                    this.elipsisBox.visible = false;
+                }
+                this.displayValue = this.value
             }
         }
 
@@ -550,7 +587,7 @@
                 for ( let i = 0; i < this.viewPortRowCount; i++ ) {
                     const dataRow = this.rows[fromIndex + i]
                     for (const dataCell of this.renderedRows[i].cells) {
-                        dataCell.text.text = dataRow[dataCell.colId] // TODO: error on resize
+                        dataCell.updateText(dataRow[dataCell.colId])
                     }
                     this.scrollbar.curStartIndex = !lastPg ? fromIndex : this.scrollbar.curStartIndex
                 }
